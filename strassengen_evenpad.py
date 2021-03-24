@@ -1,6 +1,8 @@
 from matrixclass import *
 
-def pad(A: Matrix, B: Matrix):
+# The commented function below was used in the initial attempts to implement the algorithm. However, it was excluded
+# from the final version to reduce function calls and make the code faster.
+""" def pad(A: Matrix, B: Matrix):
     refval = [A.num_of_rows+A.num_of_rows%2, A.num_of_cols+A.num_of_cols%2, B.num_of_cols+B.num_of_cols%2]
     
     Ap = Matrix([[0 for col in range(refval[1])] for row in range(refval[0]) ])
@@ -9,20 +11,28 @@ def pad(A: Matrix, B: Matrix):
     Ap.assign_submatrix(0,0,A)
     Bp.assign_submatrix(0,0,B)
 
-    return Ap, Bp
+    return Ap, Bp """
 
 
 def strassen_gen_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
+    '''Generalized version of strassen_mult which pads matrices to next even dimensions.
+    No optimization.
 
-    #Check that matrix multiplication can be performed
+    Input: Matrix A and B to be multiplied and a cut value which determines the base case.
+    Output: A matrix of size A.num_of_rows x B.num_of_cols, which is the result of AB
+    '''
+    # Check that matrix multiplication can be performed
     if A.num_of_cols != B.num_of_rows: 
         raise ValueError('The two matrices cannot be multiplied')
+
     Abp = A.num_of_rows
     Bbp = B.num_of_cols
 
+    # Base Case
     if max(A.num_of_rows, A.num_of_cols, B.num_of_cols) <= cut:
         return gauss_matrix_mult(A,B)
 
+    # Padding conditions
     if A.num_of_cols%2 != 0:
         refval = [A.num_of_rows+A.num_of_rows%2, A.num_of_cols+A.num_of_cols%2, B.num_of_cols+B.num_of_cols%2]
     
@@ -49,11 +59,11 @@ def strassen_gen_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
             Bp.assign_submatrix(0,0,B)
             B = Bp
 
-    # Recursive step
-
+    # Subquadrants
     A11, A12, A21, A22 = get_matrix_quadrants(A)
     B11, B12, B21, B22 = get_matrix_quadrants(B)
 
+    # Result Matrix
     result = Matrix([[0 for x in range(B.num_of_cols)]
                      for y in range(A.num_of_rows)],
                     clone_matrix=False)
@@ -69,6 +79,7 @@ def strassen_gen_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
     S9 = A11 - A21
     S10= B11 + B12
     
+    # Recursive Steps
     P1 = strassen_gen_evenpad(A11, S1, cut)
     P2 = strassen_gen_evenpad(S2, B22, cut)
     P3 = strassen_gen_evenpad(S3, B11, cut)
@@ -91,15 +102,24 @@ def strassen_gen_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
  
 
 def strassen_optimized_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
+    '''Generalized version of strassen_mult which pads matrices to next even dimensions.
+    Using add_submatrix() method to optimize.
+
+    Input: Matrix A and B to be multiplied and a cut value which determines the base case.
+    Output: A matrix of size A.num_of_rows x B.num_of_cols, which is the result of AB
+    '''
+     
     #Check that matrix multiplication can be performed
     if A.num_of_cols != B.num_of_rows: 
         raise ValueError('The two matrices cannot be multiplied')
     Abp = A.num_of_rows
     Bbp = B.num_of_cols
 
+    # Base Case
     if max(A.num_of_rows, A.num_of_cols, B.num_of_cols) <= cut:
         return gauss_matrix_mult(A,B)
 
+    # Padding
     if A.num_of_cols%2 != 0:
         refval = [A.num_of_rows+A.num_of_rows%2, A.num_of_cols+A.num_of_cols%2, B.num_of_cols+B.num_of_cols%2]
     
@@ -126,8 +146,7 @@ def strassen_optimized_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
             Bp.assign_submatrix(0,0,B)
             B = Bp
 
-    # Recursive step
-
+    # Subquadrants
     A11, A12, A21, A22 = get_matrix_quadrants(A)
     B11, B12, B21, B22 = get_matrix_quadrants(B)
 
@@ -136,6 +155,7 @@ def strassen_optimized_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
                     clone_matrix=False)
    
     
+    #Recursive steps. 
     P = strassen_optimized_evenpad(A11, B12 - B22, cut) #P1
     result.add_submatrix(0,result.num_of_cols//2, P)
     result.add_submatrix(result.num_of_rows//2,result.num_of_cols//2, P)
@@ -156,6 +176,7 @@ def strassen_optimized_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
     result.add_submatrix(0,0, P)
     result.add_submatrix(result.num_of_rows//2,result.num_of_cols//2, P)
 
+    # Since P6 and P7 are used only once in the definition of C, they are computed directly inside the method. 
     result.add_submatrix(0,0,strassen_optimized_evenpad(A12 - A22, B21 + B22, cut))
     result.add_submatrix(result.num_of_rows//2,result.num_of_cols//2,-1*strassen_optimized_evenpad(A11 - A21, B11 + B12, cut))
     
@@ -163,16 +184,24 @@ def strassen_optimized_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
     return result.submatrix(0, Abp, 0, Bbp)
 
 def strassen_optimized2_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
+    '''Generalized version of strassen_mult which pads matrices to next even dimensions. To optimize,
+    we collapse the definition of S into P and put the definition of C inside assign_submatrix().
 
+    Input: Matrix A and B to be multiplied and a cut value which determines the base case.
+    Output: A matrix of size A.num_of_rows x B.num_of_cols, which is the result of AB
+    '''
+    
     #Check that matrix multiplication can be performed
     if A.num_of_cols != B.num_of_rows: 
         raise ValueError('The two matrices cannot be multiplied')
     Abp = A.num_of_rows
     Bbp = B.num_of_cols
-
+    
+    # Base Case
     if max(A.num_of_rows, A.num_of_cols, B.num_of_cols) <= cut:
         return gauss_matrix_mult(A,B)
 
+    # Padding
     if A.num_of_cols%2 != 0:
         refval = [A.num_of_rows+A.num_of_rows%2, A.num_of_cols+A.num_of_cols%2, B.num_of_cols+B.num_of_cols%2]
     
@@ -199,16 +228,16 @@ def strassen_optimized2_evenpad(A: Matrix, B: Matrix, cut: int = 32)->Matrix:
             Bp.assign_submatrix(0,0,B)
             B = Bp
 
-    # Recursive step
-
+    # Subquadrants
     A11, A12, A21, A22 = get_matrix_quadrants(A)
     B11, B12, B21, B22 = get_matrix_quadrants(B)
+
 
     result = Matrix([[0 for x in range(B.num_of_cols)]
                      for y in range(A.num_of_rows)],
                     clone_matrix=False)
    
-    
+    # Recursive Steps
     P1 = strassen_gen_evenpad(A11, B12 - B22, cut)
     P2 = strassen_gen_evenpad(A11 + A12, B22, cut)
     P3 = strassen_gen_evenpad(A21 + A22, B11, cut)

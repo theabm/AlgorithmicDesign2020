@@ -2,6 +2,15 @@ from matrixclass import *
 
 
 def strassen_gen_powerpad(A: Matrix, B: Matrix, case: int, cut: int =32 )->Matrix:
+    '''Generalized version of strassen_mult which pads matrices to next power of 2 dimensions.
+
+    Input: Matrix A and B to be multiplied, a cut value which determines the base case, and a case variable.
+    Case 0: No optimization
+    Case 1: Optimization using add_submatrix().
+    Case 2: Optimization collapsing S into P and putting C directly into assign_submatrix()
+
+    Output: A matrix of size A.num_of_rows x B.num_of_cols, which is the result of AB
+    '''
     
     #Check that matrix multiplication can be performed
     if A.num_of_cols != B.num_of_rows: 
@@ -27,20 +36,26 @@ def strassen_gen_powerpad(A: Matrix, B: Matrix, case: int, cut: int =32 )->Matri
 
         return strassen_matrix_mult(Ap, Bp, cut).submatrix(0, A.num_of_rows, 0, B.num_of_cols)
 
-    elif case == 1:         #optmized case
+    elif case == 1:         #optmized case using add.submatrix()
 
         return strassen_matrix_mult2(Ap, Bp, cut).submatrix(0, A.num_of_rows, 0, B.num_of_cols)
 
-    else:
+    elif case==2:          #optimized case using collapse of definitions
 
         return strassen_matrix_mult3(Ap, Bp, cut).submatrix(0, A.num_of_rows, 0, B.num_of_cols)
-
+    else:
+        raise ValueError('Case is not available. Select 0, 1 or 2.')
 
    
 
 def strassen_matrix_mult(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
+    '''Strassen matrix multiplication for matrices of size 2^i x 2^i.
+    Input: Matrices A and B to be multiplied and a cut value which determines the base case.
+    Output: Resulting Matrix AB of size A.num_of_rows x B.num_of_cols
+    '''
+
     if A.num_of_cols != B.num_of_rows: 
-        raise ValueError('The two matrices cannot be multiplied')
+        raise ValueError('The two matrices cannot be multiplied.')
 
 
     # Base case
@@ -69,7 +84,7 @@ def strassen_matrix_mult(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
     S10= B11 + B12
 
     
-
+    #Recursive Calls
     P1 = strassen_matrix_mult(A11,S1, cut)
     P2 = strassen_matrix_mult(S2, B22, cut)
     P3 = strassen_matrix_mult(S3,B11, cut)
@@ -78,7 +93,6 @@ def strassen_matrix_mult(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
     P6 = strassen_matrix_mult(S7,S8, cut)
     P7 = strassen_matrix_mult(S9,S10, cut)
 
-    # Second batch of sums Theta(n^2)
 
     C11 = P5 + P4 - P2 + P6
     C12 = P1 + P2
@@ -96,6 +110,13 @@ def strassen_matrix_mult(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
 
 #optimized version    
 def strassen_matrix_mult2(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
+    '''Strassen matrix multiplication for matrices of size 2^i x 2^i using add_submatrix()
+    optimization.
+
+    Input: Matrices A and B to be multiplied and a cut value which determines the base case.
+    Output: Resulting Matrix AB of size A.num_of_rows x B.num_of_cols
+    '''
+
     if A.num_of_cols != B.num_of_rows: 
         raise ValueError('The two matrices cannot be multiplied')
 
@@ -139,6 +160,15 @@ def strassen_matrix_mult2(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
 
 
 def strassen_matrix_mult3(A: Matrix, B: Matrix, cut: int = 32)-> Matrix:
+    '''Strassen matrix multiplication for matrices of size 2^i x 2^i using optimization based
+    on collapsing S into P and computing C directly in assign_submatrix().
+
+    Input: Matrices A and B to be multiplied and a cut value which determines the base case.
+    Output: Resulting Matrix AB of size A.num_of_rows x B.num_of_cols
+    '''
+
+
+
     if A.num_of_cols != B.num_of_rows: 
         raise ValueError('The two matrices cannot be multiplied')
 
